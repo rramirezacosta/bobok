@@ -68,7 +68,7 @@ func TestPubSub(t *testing.T) {
 			case <-time.After(5 * time.Second):
 				t.Fatalf("Listener for label %s: timeout waiting for message at index %d", label, i)
 			}
-			time.Sleep(500 * time.Millisecond) // simulate processing time
+			time.Sleep(50 * time.Millisecond) // simulate processing time
 			wg.Done()
 		}
 	}
@@ -100,5 +100,5 @@ func TestPubSub(t *testing.T) {
 	}()
 
 	wg.Wait()
-	time.Sleep(1 * time.Second) // wait a bit to ensure no more messages are processed
+	time.Sleep(100 * time.Millisecond) // wait a bit to ensure no more messages are processed
 }
