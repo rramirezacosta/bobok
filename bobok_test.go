@@ -13,8 +13,6 @@ func TestPubSub(t *testing.T) {
 		msg string
 	}
 
-	b := NewBroadcaster()
-
 	messagesA := []message{
 		{1, "Hello"},
 		{2, "World"},
@@ -48,7 +46,7 @@ func TestPubSub(t *testing.T) {
 
 	// setup listener
 	worker := func(label string, expectedMsgs []message) {
-		ch, done, cleanup, err := b.Subscribe(label)
+		ch, done, cleanup, err := Subscribe(label)
 		if err != nil {
 			t.Fatalf("Failed to subscribe to label %s: %v", label, err)
 		}
@@ -87,13 +85,13 @@ func TestPubSub(t *testing.T) {
 		for i := 0; ; i++ {
 			stillValuesInA, stillValuesInB, stillValuesInC := i < len(messagesA), i < len(messagesB), i < len(messagesC)
 			if stillValuesInA {
-				b.Publish("A", messagesA[i])
+				Publish("A", messagesA[i])
 			}
 			if stillValuesInB {
-				b.Publish("B", messagesB[i])
+				Publish("B", messagesB[i])
 			}
 			if stillValuesInC {
-				b.Publish("C", messagesC[i])
+				Publish("C", messagesC[i])
 			}
 			if !stillValuesInA && !stillValuesInB && !stillValuesInC {
 				break

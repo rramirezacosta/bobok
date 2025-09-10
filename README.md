@@ -20,9 +20,8 @@ import "github.com/rramirezacosta/bobok"
 
 Subscribe and Listen:
 ```go
-// Create a new Pub/Sub instance
-pubsub := NewBroadcaster()
-ch, done, cleanup := pubsub.Subscribe("topic_name")
+// Suscribe to a topic_name
+ch, done, cleanup := bobok.Subscribe("topic_name")
 defer cleanup()
 
 // Listen for messages
@@ -39,6 +38,5 @@ case <-done:
 Publish:
 ```go
 // Publish a message to a topic_name
-pubsub := NewBroadcaster()
-pubsub.Publish("topic_name", "Hello, World!")
+bobok.Publish("topic_name", "Hello, World!")
 ```

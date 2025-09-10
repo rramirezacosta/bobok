@@ -6,26 +6,50 @@ import (
 	"sync"
 )
 
-type Broadcaster interface {
-	Subscribe(label string) (read <-chan any, done <-chan bool, unsuscribe func(), err error)
-	Publish(label string, message any) error
-}
+// Usage:
+//   ch, done, cleanup, err := bodok.Subscribe("my-label")
+//   defer cleanup()
+//   go func() {
+//       for {
+//           select {
+//           case <-done:
+//               return
+//           case msg := <-ch:
+//               // process message
+//           }
+//       }
+//   }()
+//
+//
+//  err = bobok.Publish("my-label", "my-message")
+//  if err != nil {
+//      // handle error
+//  }
 
-func NewBroadcaster() Broadcaster {
-	return &broadcaster{
-		pipesByLabel: sync.Map{},
-	}
-}
+var bobokSingleton *broadcaster
+var once sync.Once
 
 type broadcaster struct {
 	pipesByLabel sync.Map // map[string][]chan any
 }
 
-func (b *broadcaster) Subscribe(label string) (read <-chan any, done <-chan bool, unsuscribe func(), err error) {
+func Subscribe(label string) (read <-chan any, done <-chan bool, unsuscribe func(), err error) {
+	once.Do(func() {
+		// initialize singleton
+		bobokSingleton = &broadcaster{
+			pipesByLabel: sync.Map{},
+		}
+	})
+
+	if bobokSingleton == nil {
+		err = errors.New("bobok not initialized")
+		return
+	}
+
 	ch := make(chan any, 10)
 	doneCh := make(chan bool, 1)
 
-	if err = b.appendToChannels(label, ch); err != nil {
+	if err = bobokSingleton.appendToChannels(label, ch); err != nil {
 		return
 	}
 
@@ -33,7 +57,7 @@ func (b *broadcaster) Subscribe(label string) (read <-chan any, done <-chan bool
 	done = doneCh
 
 	unsuscribe = func() {
-		b.removeFromChannels(label, ch)
+		bobokSingleton.removeFromChannels(label, ch)
 		if doneCh != nil {
 			close(doneCh)
 			doneCh = nil
@@ -43,8 +67,19 @@ func (b *broadcaster) Subscribe(label string) (read <-chan any, done <-chan bool
 	return
 }
 
-func (b *broadcaster) Publish(label string, message any) error {
-	channels, err := b.getChannels(label)
+func Publish(label string, message any) error {
+	once.Do(func() {
+		// initialize singleton
+		bobokSingleton = &broadcaster{
+			pipesByLabel: sync.Map{},
+		}
+	})
+
+	if bobokSingleton == nil {
+		return errors.New("bobok not initialized")
+	}
+
+	channels, err := bobokSingleton.getChannels(label)
 
 	if err != nil {
 		return fmt.Errorf("failed to publsh to label %s: %w", label, err)
