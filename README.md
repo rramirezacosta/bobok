@@ -26,7 +26,8 @@ defer cleanup()
 
 // Listen for messages
 select {
-case msg := <-ch:
+case raw := <-ch:
+    msg := raw.(string)
     fmt.Println("Received message:", msg)
 case <-done:
     fmt.Println("Subscription closed")
