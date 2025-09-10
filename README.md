@@ -21,17 +21,12 @@ import "github.com/rramirezacosta/bobok"
 Subscribe and Listen:
 ```go
 // Suscribe to a topic_name
-ch, done, cleanup := bobok.Subscribe("topic_name")
-defer cleanup()
+ch, unsubscribe, _ := bobok.Subscribe("topic_name")
+defer unsubscribe()
 
 // Listen for messages
-select {
-case raw := <-ch:
-    msg := raw.(string)
-    fmt.Println("Received message:", msg)
-case <-done:
-    fmt.Println("Subscription closed")
-    break
+rawMsg := <-ch
+fmt.Println("Received message:", rawMsg.(string))
 }
 
 ```

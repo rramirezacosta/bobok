@@ -46,18 +46,19 @@ func TestPubSub(t *testing.T) {
 
 	// setup listener
 	worker := func(label string, expectedMsgs []message) {
-		ch, done, cleanup, err := Subscribe(label)
+		ch, unsubscribe, err := Subscribe(label)
 		if err != nil {
 			t.Fatalf("Failed to subscribe to label %s: %v", label, err)
 		}
-		defer cleanup()
+		defer unsubscribe()
 
 		for i, expected := range expectedMsgs {
 
 			select {
-			case <-done:
-				t.Fatalf("Listener for label %s: listener closed unexpectedly at index %d", label, i)
-			case raw := <-ch:
+			case raw, ok := <-ch:
+				if !ok {
+					t.Fatalf("Listener for label %s: channel closed unexpectedly at index %d", label, i)
+				}
 				received, ok := raw.(message)
 				if !ok {
 					t.Fatalf("Listener for label %s: expected message of type %T, got %T at index %d", label, expected, raw, i)

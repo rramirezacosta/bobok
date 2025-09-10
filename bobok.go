@@ -6,26 +6,6 @@ import (
 	"sync"
 )
 
-// Usage:
-//   ch, done, cleanup, err := bodok.Subscribe("my-label")
-//   defer cleanup()
-//   go func() {
-//       for {
-//           select {
-//           case <-done:
-//               return
-//           case msg := <-ch:
-//               // process message
-//           }
-//       }
-//   }()
-//
-//
-//  err = bobok.Publish("my-label", "my-message")
-//  if err != nil {
-//      // handle error
-//  }
-
 var bobokSingleton *broadcaster
 var once sync.Once
 
@@ -33,7 +13,7 @@ type broadcaster struct {
 	pipesByLabel sync.Map // map[string][]chan any
 }
 
-func Subscribe(label string) (read <-chan any, done <-chan bool, unsuscribe func(), err error) {
+func Subscribe(label string) (read <-chan any, unsubscribe func(), err error) {
 	once.Do(func() {
 		// initialize singleton
 		bobokSingleton = &broadcaster{
@@ -54,9 +34,7 @@ func Subscribe(label string) (read <-chan any, done <-chan bool, unsuscribe func
 	}
 
 	read = ch
-	done = doneCh
-
-	unsuscribe = func() {
+	unsubscribe = func() {
 		bobokSingleton.removeFromChannels(label, ch)
 		if doneCh != nil {
 			close(doneCh)
