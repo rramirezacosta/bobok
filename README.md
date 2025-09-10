@@ -27,7 +27,6 @@ defer unsubscribe()
 // Listen for messages
 rawMsg := <-ch
 fmt.Println("Received message:", rawMsg.(string))
-}
 
 ```
 
