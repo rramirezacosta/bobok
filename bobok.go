@@ -9,15 +9,20 @@ import (
 var bobokSingleton *broadcaster
 var once sync.Once
 
+type topic struct {
+	mu          sync.Mutex
+	subscribers []chan any
+}
+
 type broadcaster struct {
-	pipesByLabel sync.Map // map[string][]chan any
+	topicsByLabel sync.Map // map[string]*topic
 }
 
 func Subscribe(label string) (read <-chan any, unsubscribe func(), err error) {
 	once.Do(func() {
 		// initialize singleton
 		bobokSingleton = &broadcaster{
-			pipesByLabel: sync.Map{},
+			topicsByLabel: sync.Map{},
 		}
 	})
 
@@ -27,19 +32,14 @@ func Subscribe(label string) (read <-chan any, unsubscribe func(), err error) {
 	}
 
 	ch := make(chan any, 10)
-	doneCh := make(chan bool, 1)
 
-	if err = bobokSingleton.appendToChannels(label, ch); err != nil {
+	if err = bobokSingleton.appendToTopic(label, ch); err != nil {
 		return
 	}
 
 	read = ch
 	unsubscribe = func() {
-		bobokSingleton.removeFromChannels(label, ch)
-		if doneCh != nil {
-			close(doneCh)
-			doneCh = nil
-		}
+		bobokSingleton.removeFromTopic(label, ch)
 	}
 
 	return
@@ -49,7 +49,7 @@ func Publish(label string, message any) error {
 	once.Do(func() {
 		// initialize singleton
 		bobokSingleton = &broadcaster{
-			pipesByLabel: sync.Map{},
+			topicsByLabel: sync.Map{},
 		}
 	})
 
@@ -57,68 +57,76 @@ func Publish(label string, message any) error {
 		return errors.New("bobok not initialized")
 	}
 
-	channels, err := bobokSingleton.getChannels(label)
-
+	t, err := bobokSingleton.getTopic(label)
 	if err != nil {
-		return fmt.Errorf("failed to publsh to label %s: %w", label, err)
+		return fmt.Errorf("failed to publish to label %s: %w", label, err)
 	}
 
-	for _, ch := range channels {
-		if ch == nil {
-			continue
+	t.mu.Lock()
+	for _, ch := range t.subscribers {
+		if ch != nil {
+			select {
+			case ch <- message:
+			default:
+				// Channel full, skip this subscribers
+			}
 		}
-		ch <- message
 	}
+	t.mu.Unlock()
 
 	return nil
 }
 
-func (b *broadcaster) getChannels(label string) (pipe []chan any, err error) {
-	if v, exists := b.pipesByLabel.Load(label); !exists {
-		pipe = make([]chan any, 0)
-		b.pipesByLabel.Store(label, pipe)
-		return pipe, nil
+func (b *broadcaster) getTopic(label string) (*topic, error) {
+	if v, exists := b.topicsByLabel.Load(label); !exists {
+		t := &topic{
+			mu:          sync.Mutex{},
+			subscribers: make([]chan any, 0),
+		}
+		b.topicsByLabel.Store(label, t)
+		return t, nil
 	} else {
-		var isOk bool
-		pipe, isOk = v.([]chan any)
-		if !isOk {
-			err = errors.New("invalid pipe type")
+		if t, ok := v.(*topic); ok {
+			return t, nil
+		} else {
+			return nil, errors.New("invalid topic type")
 		}
 	}
-	return
 }
 
-func (b *broadcaster) removeFromChannels(label string, ch chan any) error {
-	channels, err := b.getChannels(label)
+func (b *broadcaster) removeFromTopic(label string, ch chan any) error {
+	t, err := b.getTopic(label)
 	if err != nil {
 		return fmt.Errorf("failed to remove channel from label %s: %w", label, err)
 	}
 
-	for i, c := range channels {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	for i, c := range t.subscribers {
 		if c == ch {
-			channels = append(channels[:i], channels[i+1:]...)
+			t.subscribers = append(t.subscribers[:i], t.subscribers[i+1:]...)
 			close(c)
 			break
 		}
 	}
 
-	if len(channels) == 0 {
-		b.pipesByLabel.Delete(label)
-	} else {
-		b.pipesByLabel.Store(label, channels)
+	if len(t.subscribers) == 0 {
+		b.topicsByLabel.Delete(label)
 	}
 
 	return nil
 }
 
-func (b *broadcaster) appendToChannels(label string, ch chan any) error {
-	channels, err := b.getChannels(label)
+func (b *broadcaster) appendToTopic(label string, ch chan any) error {
+	t, err := b.getTopic(label)
 	if err != nil {
 		return fmt.Errorf("failed to append channel to label %s: %w", label, err)
 	}
 
-	channels = append(channels, ch)
-	b.pipesByLabel.Store(label, channels)
+	t.mu.Lock()
+	t.subscribers = append(t.subscribers, ch)
+	t.mu.Unlock()
 
 	return nil
 }
