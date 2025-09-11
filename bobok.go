@@ -31,7 +31,7 @@ func Subscribe(label string) (read <-chan any, unsubscribe func(), err error) {
 		return
 	}
 
-	ch := make(chan any, 10)
+	ch := make(chan any, 50) // Buffered channel to avoid blocking
 
 	if err = bobokSingleton.appendToTopic(label, ch); err != nil {
 		return
