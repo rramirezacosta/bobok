@@ -1,6 +1,7 @@
 package bobok
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -41,6 +42,11 @@ func TestPubSub(t *testing.T) {
 
 	messageCount := len(messagesA) + len(messagesB)
 
+	// waitgroup to wait for all subscriptions to be done
+	subsWg := sync.WaitGroup{}
+	subsWg.Add(4) // we will create 4 subscriptions
+
+	// waitgroup to wait for all messages to be received
 	wg := sync.WaitGroup{}
 	wg.Add((messageCount) * 2) // each message is listened twice
 
@@ -52,6 +58,8 @@ func TestPubSub(t *testing.T) {
 		}
 		defer unsubscribe()
 
+		subsWg.Done() // signal that subscription is done
+
 		for i, expected := range expectedMsgs {
 
 			select {
@@ -60,6 +68,7 @@ func TestPubSub(t *testing.T) {
 					t.Fatalf("Listener for label %s: channel closed unexpectedly at index %d", label, i)
 				}
 				received, ok := raw.(message)
+				fmt.Println("Listener for label", label, "received message:", received)
 				if !ok {
 					t.Fatalf("Listener for label %s: expected message of type %T, got %T at index %d", label, expected, raw, i)
 				}
@@ -69,7 +78,6 @@ func TestPubSub(t *testing.T) {
 			case <-time.After(5 * time.Second):
 				t.Fatalf("Listener for label %s: timeout waiting for message at index %d", label, i)
 			}
-			time.Sleep(50 * time.Millisecond) // simulate processing time
 			wg.Done()
 		}
 	}
@@ -79,7 +87,7 @@ func TestPubSub(t *testing.T) {
 	go worker("B", messagesB)
 	go worker("B", messagesB)
 
-	time.Sleep(200 * time.Millisecond) // Give listeners time to subscribe
+	subsWg.Wait() // wait for all subscriptions to be ready
 
 	// publish messages
 	go func() {
@@ -101,5 +109,4 @@ func TestPubSub(t *testing.T) {
 	}()
 
 	wg.Wait()
-	time.Sleep(100 * time.Millisecond) // wait a bit to ensure no more messages are processed
 }
