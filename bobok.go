@@ -62,6 +62,11 @@ func Publish(label string, message any) error {
 		return fmt.Errorf("failed to publish to label %s: %w", label, err)
 	}
 
+	if t.subscribers == nil || len(t.subscribers) == 0 {
+		// No subscribers, nothing to Do
+		return nil
+	}
+
 	t.mu.Lock()
 	for _, ch := range t.subscribers {
 		if ch != nil {
@@ -78,20 +83,18 @@ func Publish(label string, message any) error {
 }
 
 func (b *broadcaster) getTopic(label string) (*topic, error) {
-	if v, exists := b.topicsByLabel.Load(label); !exists {
-		t := &topic{
-			mu:          sync.Mutex{},
-			subscribers: make([]chan any, 0),
-		}
-		b.topicsByLabel.Store(label, t)
-		return t, nil
-	} else {
-		if t, ok := v.(*topic); ok {
-			return t, nil
-		} else {
-			return nil, errors.New("invalid topic type")
-		}
+	rawTopic, _ := b.topicsByLabel.LoadOrStore(label, &topic{
+		mu:          sync.Mutex{},
+		subscribers: make([]chan any, 0),
+	})
+
+	t, ok := rawTopic.(*topic)
+
+	if !ok {
+		return nil, fmt.Errorf("invalid topic type for label %s", label)
 	}
+
+	return t, nil
 }
 
 func (b *broadcaster) removeFromTopic(label string, ch chan any) error {
