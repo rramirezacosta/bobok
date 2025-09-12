@@ -1,7 +1,6 @@
 package bobok
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -68,7 +67,6 @@ func TestPubSub(t *testing.T) {
 					t.Fatalf("Listener for label %s: channel closed unexpectedly at index %d", label, i)
 				}
 				received, ok := raw.(message)
-				fmt.Println("Listener for label", label, "received message:", received)
 				if !ok {
 					t.Fatalf("Listener for label %s: expected message of type %T, got %T at index %d", label, expected, raw, i)
 				}
