@@ -9,7 +9,7 @@ A lightweight and concurrent Pub/Sub messaging library for Go. 📨
 
 - **Lightweight**: Minimal overhead and dependencies.
 - **Concurrent**: Built with goroutines in mind for high-performance applications.
-- **Simple API**: Get started with an intuitive and easy-to-use methods.
+- **Simple API**: Get started with intuitive and easy-to-use methods.
 
 
 # Installation
