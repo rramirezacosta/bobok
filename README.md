@@ -5,6 +5,13 @@ A lightweight and concurrent Pub/Sub messaging library for Go. 📨
   <img width="320px" src="https://github.com/rramirezacosta/bobok/blob/main/bobok.webp?raw=true" alt="bobok"/>
 </p>
 
+**Features**:
+
+- **Lightweight**: Minimal overhead and dependencies.
+- **Concurrent**: Built with goroutines in mind for high-performance applications.
+- **Simple API**: Get started with an intuitive and easy-to-use methods.
+
+
 # Installation
 ```bash
 ### Install the package
@@ -35,3 +42,8 @@ Publish:
 // Publish a message to a topic_name
 bobok.Publish("topic_name", "Hello, World!")
 ```
+
+# Why "Bobok"
+<dl><dd>
+When a terrible drought struck the Yaqui lands, the sparrow and the swallow carried pleas to the rain god, Yuku, but no answer came. All hope seemed lost until they called upon Bobok, a wise toad who knew delivery was everything. On borrowed bat wings, he flew to the heavens and confronted the god. With blunt conviction, he demanded Yuku do his duty, proving to be the only messenger capable of the task.
+</dd></dl>
